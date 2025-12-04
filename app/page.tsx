@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+
 export default function Home() {
   const [selectedValue, setSelectedValue] = useState("option1");
   const options = [
@@ -13,10 +14,21 @@ export default function Home() {
     { id: "option2", label: "Spelling, Grammar, and Minor Readability" },
     { id: "option3", label: "Completely Transform your Blog" },
   ];
+  const [edittedBlog, setEdittedBlog] = useState<string | null>(null);
+  const [content, setContent] = useState<string>("");
+
+  const handleClick = async () => {
+    const res = await fetch("/api/edit-blog", {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+  
+    const data = await res.json();
+    setEdittedBlog(data.edited);
+  };
 
   return (
     <div className="flex flex-col min-h-screen items-center justify-center bg-brown-100 ">
- 
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center sm:p-16 p-8 bg-white ">
         <section className="flex flex-row gap-10 w-full sm:justify-center justify-start items-center">
           <h2 className="text-4xl font-bold text-brown-700">Blog editor</h2>
@@ -33,12 +45,17 @@ export default function Home() {
             Paste your blog below and let AI magic transform it into a
             masterpiece
           </p>
-          <textarea className="bg-[#F8F5EE] rounded border-brown-800  p-2 border-2 mt-5 w-full h-150" />
+          <textarea
+            className="bg-[#F8F5EE] rounded border-brown-800  p-2 border-2 mt-5 w-full h-150"
+            onChange={(e) => setContent(e.target.value)}
+          />
         </div>
         <div className="flex flex-col w-full px-32 gap-1">
           {options.map((button) => (
-            <Button key={button.id}
-              className={cn("text-brown-800 border-2 border-brown-800 w-full hover:bg-brown-600 transition-colors duration-200 hover:text-white",
+            <Button
+              key={button.id}
+              className={cn(
+                "text-brown-800 border-2 border-brown-800 w-full hover:bg-brown-600 transition-colors duration-200 hover:text-white",
                 selectedValue === button.id && "bg-brown-600 text-white"
               )}
               onClick={() => setSelectedValue(button.id)}
@@ -51,10 +68,12 @@ export default function Home() {
         <Button
           className="text-brown-800 mt-5 border-brown-800 border-2"
           variant={"elevated"}
-        
+          onClick={handleClick}
         >
           Edit Blog
         </Button>
+
+        <section>{edittedBlog && <p>{edittedBlog}</p>}</section>
       </main>
       <footer className="bg-brown-400 p-5 min-w-full">
         <h2>© Write Magic. All Rights Reserved</h2>
