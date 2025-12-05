@@ -3,41 +3,66 @@
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ClipLoader } from "react-spinners";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 type ImprovementOption = "option1" | "option2" | "option3";
+const options = [
+  { id: "option1", label: "Spelling and Grammar Only" },
+  { id: "option2", label: "Spelling, Grammar, and Minor Readability" },
+  { id: "option3", label: "Completely Transform your Blog" },
+] as const;
 
 export default function Home() {
   const [selectedValue, setSelectedValue] = useState<ImprovementOption>("option1");
-  const options = [
-    { id: "option1", label: "Spelling and Grammar Only" },
-    { id: "option2", label: "Spelling, Grammar, and Minor Readability" },
-    { id: "option3", label: "Completely Transform your Blog" },
-  ] as const;
-  const [edittedBlog, setEdittedBlog] = useState<string | null>(null);
+
+  const [editedBlog, setEditedBlog] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const targetRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (editedBlog && targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [editedBlog]);
+
 
   const handleClick = async () => {
-    setEdittedBlog("");
-    setContent("")
-    if (!content) {
-      setEdittedBlog("Please enter a blog post");
+    setErrorMessage(null);
+    if (!content.trim()) {
+      setEditedBlog("Please enter a blog post");
       return;
     }
     setIsLoading(true);
+    setEditedBlog(null)
+    try {
     const res = await fetch("/api/edit-blog", {
       method: "POST",
       body: JSON.stringify({ content, selectedValue }),
     });
+    
+    if (!res.ok) {
+      const text = await res.text().catch(() => null);
+        throw new Error(text || `Server responded with ${res.status}`);
+
+    }
 
     const data = await res.json();
-    setEdittedBlog(data.edited);
-    setIsLoading(false);
+    setEditedBlog(data.edited ?? "No content returned from the API.");
+
+
+    } catch(err) {
+      console.error("Edit blog error:", err);
+      setErrorMessage("An unexpected error occurred.");
+    } finally {
+
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -96,12 +121,19 @@ export default function Home() {
           variant={"elevated"}
           onClick={handleClick}
         >
-          Edit Blog
+           {isLoading ? "Editing..." : "Edit Blog"}
         </Button>
 
-        {edittedBlog && (
-          <div className="prose prose-neutral mt-10">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{edittedBlog}</ReactMarkdown>
+        {errorMessage && (
+          <div role="alert" className="text-red-600 mt-4">
+            {errorMessage}
+          </div>
+        )}
+
+        {editedBlog && (
+          <div ref={targetRef}
+          className="prose prose-neutral mt-10">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedBlog}</ReactMarkdown>
           </div>
         )}
       </main>
