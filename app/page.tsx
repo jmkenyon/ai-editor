@@ -5,26 +5,39 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ClipLoader } from "react-spinners";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
+type ImprovementOption = "option1" | "option2" | "option3";
 
 export default function Home() {
-  const [selectedValue, setSelectedValue] = useState("option1");
+  const [selectedValue, setSelectedValue] = useState<ImprovementOption>("option1");
   const options = [
     { id: "option1", label: "Spelling and Grammar Only" },
     { id: "option2", label: "Spelling, Grammar, and Minor Readability" },
     { id: "option3", label: "Completely Transform your Blog" },
-  ];
+  ] as const;
   const [edittedBlog, setEdittedBlog] = useState<string | null>(null);
   const [content, setContent] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = async () => {
+    setEdittedBlog("");
+    setContent("")
+    if (!content) {
+      setEdittedBlog("Please enter a blog post");
+      return;
+    }
+    setIsLoading(true);
     const res = await fetch("/api/edit-blog", {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, selectedValue }),
     });
-  
+
     const data = await res.json();
     setEdittedBlog(data.edited);
+    setIsLoading(false);
   };
 
   return (
@@ -40,15 +53,28 @@ export default function Home() {
             height={50}
           />
         </section>
-        <div className="pt-5">
+        <div className="pt-5 flex flex-col items-center justify-center">
           <p>
             Paste your blog below and let AI magic transform it into a
             masterpiece
           </p>
-          <textarea
-            className="bg-[#F8F5EE] rounded border-brown-800  p-2 border-2 mt-5 w-full h-150"
-            onChange={(e) => setContent(e.target.value)}
-          />
+
+          {isLoading ? (
+            <ClipLoader
+              loading={isLoading}
+              size={150}
+              color="#4b371b"
+              aria-label="Loading Spinner"
+              data-testid="loader"
+              className="my-50 border-2"
+            />
+          ) : (
+            <textarea
+              className="bg-[#F8F5EE] rounded border-brown-800  p-2 border-2 my-5 w-full h-150"
+              onChange={(e) => setContent(e.target.value)}
+              required
+            />
+          )}
         </div>
         <div className="flex flex-col w-full px-32 gap-1">
           {options.map((button) => (
@@ -73,7 +99,11 @@ export default function Home() {
           Edit Blog
         </Button>
 
-        <section>{edittedBlog && <p>{edittedBlog}</p>}</section>
+        {edittedBlog && (
+          <div className="prose prose-neutral mt-10">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{edittedBlog}</ReactMarkdown>
+          </div>
+        )}
       </main>
       <footer className="bg-brown-400 p-5 min-w-full">
         <h2>© Write Magic. All Rights Reserved</h2>
